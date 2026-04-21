@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetInfo — ISP Network Repository</title>
+  <meta name="description" content="ISP Network Information Repository — Browse and manage NNI connections, links, VLANs, routes and BGP sessions." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── TOP NAV ── -->
+  <header class="topnav">
+    <div class="topnav__brand" id="nav-brand" onclick="navigate('dashboard')">
+      <span class="topnav__logo">◈</span>
+      <span class="topnav__name">NetInfo</span>
+      <span class="topnav__tagline">ISP Network Repository</span>
+    </div>
+    <nav class="topnav__breadcrumb" id="breadcrumb"></nav>
+    <div class="topnav__actions">
+      <div class="search-wrap">
+        <input type="text" id="global-search" placeholder="Search…" autocomplete="off" />
+        <span class="search-icon">⌕</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main id="app-root"></main>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MODAL — ADD / EDIT COMPANY
+  ════════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="company-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="company-modal-title">
+      <div class="modal__header">
+        <h2 class="modal__title" id="company-modal-title">Add Company</h2>
+        <button class="modal__close" onclick="closeModal('company-modal')" aria-label="Close">✕</button>
+      </div>
+      <form id="company-form" class="modal__body" onsubmit="submitCompanyForm(event)">
+        <input type="hidden" id="company-id" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="company-name">Company Name *</label>
+            <input id="company-name" type="text" required placeholder="e.g. Cedarview" />
+          </div>
+          <div class="form-group">
+            <label for="company-type">Type *</label>
+            <select id="company-type" required>
+              <option value="NNI">NNI</option>
+              <option value="IXP">IXP</option>
+              <option value="Transit">Transit</option>
+              <option value="Peer">Peer</option>
+              <option value="Customer">Customer</option>
+              <option value="Lease Line">Lease Line</option>
+              <option value="Dark Fiber">Dark Fiber</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="company-asn">ASN</label>
+            <input id="company-asn" type="text" placeholder="e.g. AS12345" />
+          </div>
+          <div class="form-group">
+            <label for="company-contact">Contact</label>
+            <input id="company-contact" type="text" placeholder="NOC contact or email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="company-description">Description</label>
+          <textarea id="company-description" rows="3" placeholder="Brief description of this partner/company…"></textarea>
+        </div>
+
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost" onclick="closeModal('company-modal')">Cancel</button>
+          <button type="submit" class="btn btn--primary" id="company-submit-btn">Add Company</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MODAL — ADD / EDIT LINK
+  ════════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="link-modal" hidden>
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="link-modal-title">
+      <div class="modal__header">
+        <h2 class="modal__title" id="link-modal-title">Add Link</h2>
+        <button class="modal__close" onclick="closeModal('link-modal')" aria-label="Close">✕</button>
+      </div>
+      <form id="link-form" class="modal__body" onsubmit="submitLinkForm(event)">
+        <input type="hidden" id="link-id" />
+        <input type="hidden" id="link-company-id" />
+
+        <div class="form-section-title">Basic Info</div>
+        <div class="form-row">
+          <div class="form-group form-group--stretch">
+            <label for="link-name">Link Name *</label>
+            <input id="link-name" type="text" required placeholder="e.g. Rack Centre to Oregun" />
+          </div>
+          <div class="form-group">
+            <label for="link-status">Status *</label>
+            <select id="link-status" required>
+              <option value="active">Active</option>
+              <option value="down">Down</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="decommissioned">Decommissioned</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="link-description">Description</label>
+          <input id="link-description" type="text" placeholder="Short description of this link" />
+        </div>
+
+        <div class="form-section-title">Physical / Circuit</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="link-interface-local">Local Interface</label>
+            <input id="link-interface-local" type="text" placeholder="e.g. GigabitEthernet0/0/1" class="mono" />
+          </div>
+          <div class="form-group">
+            <label for="link-interface-remote">Remote Interface</label>
+            <input id="link-interface-remote" type="text" placeholder="e.g. Eth1/1" class="mono" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="link-bandwidth">Bandwidth / Capacity</label>
+            <input id="link-bandwidth" type="text" placeholder="e.g. 1Gbps, 10G" />
+          </div>
+          <div class="form-group">
+            <label for="link-circuit-id">Circuit ID</label>
+            <input id="link-circuit-id" type="text" placeholder="e.g. CKT-NG-001" class="mono" />
+          </div>
+          <div class="form-group">
+            <label for="link-provider-ref">Provider Reference</label>
+            <input id="link-provider-ref" type="text" placeholder="Provider ticket / ref no." />
+          </div>
+        </div>
+
+        <div class="form-section-title">Layer 2 — VLAN</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="link-vlan-id">VLAN ID</label>
+            <input id="link-vlan-id" type="text" placeholder="e.g. 100" class="mono" />
+          </div>
+          <div class="form-group">
+            <label for="link-vlan-name">VLAN Name</label>
+            <input id="link-vlan-name" type="text" placeholder="e.g. CEDARVIEW-NNI" />
+          </div>
+          <div class="form-group">
+            <label for="link-encapsulation">Encapsulation</label>
+            <select id="link-encapsulation">
+              <option value="">— None —</option>
+              <option value="dot1q">dot1q</option>
+              <option value="QinQ">QinQ (802.1ad)</option>
+              <option value="untagged">Untagged</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-section-title">Layer 3 — IP Addressing</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="link-local-ip">Local IP</label>
+            <input id="link-local-ip" type="text" placeholder="e.g. 192.168.1.1" class="mono" />
+          </div>
+          <div class="form-group">
+            <label for="link-remote-ip">Remote IP</label>
+            <input id="link-remote-ip" type="text" placeholder="e.g. 192.168.1.2" class="mono" />
+          </div>
+          <div class="form-group">
+            <label for="link-subnet">Subnet</label>
+            <input id="link-subnet" type="text" placeholder="e.g. /30" class="mono" />
+          </div>
+        </div>
+
+        <div class="form-section-title">Routing — BGP</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="link-bgp-local-as">Local AS</label>
+            <input id="link-bgp-local-as" type="text" placeholder="Your AS number" class="mono" />
+          </div>
+          <div class="form-group">
+            <label for="link-bgp-peer-as">Peer AS</label>
+            <input id="link-bgp-peer-as" type="text" placeholder="Peer AS number" class="mono" />
+          </div>
+          <div class="form-group">
+            <label for="link-bgp-peer-ip">BGP Peer IP</label>
+            <input id="link-bgp-peer-ip" type="text" placeholder="e.g. 192.168.1.2" class="mono" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group form-group--stretch">
+            <label for="link-advertised-routes">Advertised Routes / Prefixes</label>
+            <textarea id="link-advertised-routes" rows="2" placeholder="e.g. 196.53.0.0/16" class="mono"></textarea>
+          </div>
+          <div class="form-group form-group--stretch">
+            <label for="link-received-routes">Received Routes / Prefixes</label>
+            <textarea id="link-received-routes" rows="2" placeholder="Routes received from peer" class="mono"></textarea>
+          </div>
+        </div>
+
+        <div class="form-section-title">Notes</div>
+        <div class="form-group">
+          <label for="link-notes">Notes / Troubleshooting Info</label>
+          <textarea id="link-notes" rows="3" placeholder="Any useful notes, known issues, escalation contacts, etc."></textarea>
+        </div>
+
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost" onclick="closeModal('link-modal')">Cancel</button>
+          <button type="submit" class="btn btn--primary" id="link-submit-btn">Add Link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MODAL — ADD / EDIT CUSTOMER
+  ════════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="customer-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="customer-modal-title">
+      <div class="modal__header">
+        <h2 class="modal__title" id="customer-modal-title">Add Customer</h2>
+        <button class="modal__close" onclick="closeModal('customer-modal')" aria-label="Close">✕</button>
+      </div>
+      <form id="customer-form" class="modal__body" onsubmit="submitCustomerForm(event)">
+        <input type="hidden" id="customer-id" />
+        <input type="hidden" id="customer-link-id" />
+
+        <div class="form-row">
+          <div class="form-group form-group--stretch">
+            <label for="customer-name">Customer Name *</label>
+            <input id="customer-name" type="text" required placeholder="e.g. Ahmadiyya, Rack Centre" />
+          </div>
+          <div class="form-group">
+            <label for="customer-vlan-id">VLAN ID</label>
+            <input id="customer-vlan-id" type="text" placeholder="e.g. 200" class="mono" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="customer-address">Address / Location</label>
+          <input id="customer-address" type="text" placeholder="Physical address or site location" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="customer-point-a">Point A</label>
+            <input id="customer-point-a" type="text" placeholder="e.g. Rack Centre, Lagos" />
+          </div>
+          <div class="form-group">
+            <label for="customer-point-b">Point B</label>
+            <input id="customer-point-b" type="text" placeholder="e.g. Oregun Hub" />
+          </div>
+        </div>
+
+        <div class="form-section-title">Optical Power</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="customer-optical-rx">Optical Power RX</label>
+            <input id="customer-optical-rx" type="text" placeholder="e.g. -18 dBm" class="mono" />
+          </div>
+          <div class="form-group">
+            <label for="customer-optical-tx">Optical Power TX</label>
+            <input id="customer-optical-tx" type="text" placeholder="e.g. -5 dBm" class="mono" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="customer-circuit-id">Circuit ID</label>
+          <input id="customer-circuit-id" type="text" placeholder="e.g. CKT-AHM-001" class="mono" />
+        </div>
+
+        <div class="form-group">
+          <label for="customer-notes">Notes</label>
+          <textarea id="customer-notes" rows="3" placeholder="Any additional notes, special config, escalation info…"></textarea>
+        </div>
+
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost" onclick="closeModal('customer-modal')">Cancel</button>
+          <button type="submit" class="btn btn--primary" id="customer-submit-btn">Add Customer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── TOAST NOTIFICATIONS ── -->
+  <div id="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
